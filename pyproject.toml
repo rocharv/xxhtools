@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "xxhtools"
+version = "0.1.0"
+description = ""
+authors = ["Rodrigo Viana Rocha <rocharv@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+xxhash = "^3.5.0"
+pytest = "^8.3.4"
+coverage = "^7.6.12"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
