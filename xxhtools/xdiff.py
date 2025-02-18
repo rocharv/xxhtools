@@ -214,9 +214,9 @@ def standard_output(hash_dict: dict[str, list[str]],
     print_path_comparison(hash_dict,
                           path1,
                           path2,
+                          common,
                           exclusive1,
                           exclusive2,
-                          common,
                           is_verbose)
 
 
@@ -246,7 +246,7 @@ def main(args: argparse.Namespace | None = None) -> None:
 if __name__ == "__main__":
     my_args = argparse.Namespace
     my_args.path1 = "./tests/fixtures/directory1/"
-    my_args.path2 = "./tests/fixtures/directory1/subdir1/"
+    my_args.path2 = "./tests/fixtures/directory1/"
     my_args.cachefile = None
     my_args.recursive = True
     my_args.verbose = True
