@@ -245,7 +245,7 @@ def main(args: argparse.Namespace | None = None) -> None:
 
 if __name__ == "__main__":
     my_args = argparse.Namespace
-    my_args.path1 = "./tests/fixtures/directory1/"
+    my_args.path1 = "./tests/fixtures/"
     my_args.path2 = "./tests/fixtures/directory1/"
     my_args.cachefile = None
     my_args.recursive = True

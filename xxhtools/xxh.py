@@ -151,7 +151,7 @@ def standard_output(path: str,
     if is_verbose:
         end_time: float = time.time()
         verbose_report(end_time - starting_time,
-                        current_file, current_bytes)
+                       current_file, current_bytes)
 
 
 def verbose_report(elapsed_time: int,
