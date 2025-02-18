@@ -89,29 +89,36 @@ def print_dict(dictionary: dict[str, list[str]], indent: int = 2) -> None:
     print("}")
 
 
-def print_path_comparison(path1: str,
+def print_path_comparison(hash_dict: dict[str, list[str]],
+                          path1: str,
                           path2: str,
-                          exclusive1: dict[str, list[str]],
-                          exclusive2: dict[str, list[str]],
-                          common: dict[str, list[str]],
+                          common: set[str],
+                          exclusive1: set[str],
+                          exclusive2: set[str],
                           is_verbose: bool) -> None:
     """
     Print the comparison output of the paths `path1` and `path2`. The
     dictionaries `exclusive1`, `exclusive2` and `common` are the result of the
     comparison of the files in the paths by their xxHash64 hashes.
     """
+    common_dict: dict[str, list[str]] = {k: v for k, v in hash_dict.items()
+                                            if k in common}
+    exclusive1_dict: dict[str, list[str]] = {k: v for k, v in hash_dict.items()
+                                            if k in exclusive1}
+    exclusive2_dict: dict[str, list[str]] = {k: v for k, v in hash_dict.items()
+                                            if k in exclusive2}
     if is_verbose:
         print(f"Exclusive hashes in '{path1}' (total = {len(exclusive1)})")
     print("<", end="")
-    print_dict(exclusive1)
+    print_dict(exclusive1_dict)
     if is_verbose:
         print(f"Exclusive hashes in '{path2}' (total = {len(exclusive2)})")
     print(">", end="")
-    print_dict(exclusive2)
+    print_dict(exclusive2_dict)
     if is_verbose:
         print(f"Common hashes (total = {len(common)})")
     print("=", end="")
-    print_dict(common)
+    print_dict(common_dict)
     if is_verbose:
         if exclusive1 and not exclusive2:
             print(f"All files in '{path2}' are in '{path1}'.")
@@ -193,9 +200,6 @@ def standard_output(hash_dict: dict[str, list[str]],
     """
     abs_path1: str = os.path.abspath(path1)
     abs_path2: str = os.path.abspath(path2)
-    common: dict[str, list[str]] = {}
-    exclusive1: dict[str, list[str]] = {}
-    exclusive2: dict[str, list[str]] = {}
     hash1: set[str] = set()
     hash2: set[str] = set()
     for hash, files in hash_dict.items():
@@ -204,15 +208,11 @@ def standard_output(hash_dict: dict[str, list[str]],
                 hash1.add(hash)
             if file.startswith(abs_path2):
                 hash2.add(hash)
-    for hash in hash1:
-        if hash in hash2:
-            common[hash] = hash_dict[hash]
-        else:
-            exclusive1[hash] = hash_dict[hash]
-    for hash in hash2:
-        if hash not in hash1:
-            exclusive2[hash] = hash_dict[hash]
-    print_path_comparison(path1,
+    common: set[str] = hash1.intersection(hash2)
+    exclusive1: set[str] = hash1.difference(hash2)
+    exclusive2: set[str] = hash2.difference(hash1)
+    print_path_comparison(hash_dict,
+                          path1,
                           path2,
                           exclusive1,
                           exclusive2,
