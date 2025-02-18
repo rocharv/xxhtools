@@ -2,15 +2,15 @@ import os
 from xxhash import xxh64
 
 
-def all_files_in_directory(path: str, is_recursive: bool) -> list[str]:
+def all_files_in_directory(path: str, is_recursive: bool) -> set[str]:
     """
     Return a list with all files in the `path` provided and its subdirectories
     (if `is_recursive` is True).
     """
-    all_files: list[str] = []
+    all_files: set[str] = set()
     for root, _, files in os.walk(path):
         for file in files:
-            all_files.append(os.path.join(root, file))
+            all_files.add(os.path.join(root, file))
         if not is_recursive:
             break
     return all_files
@@ -85,21 +85,21 @@ def paths_info(paths: str,
     - `file_count`: total number of files in the paths
     - `total_bytes`: total size of all files in the paths
     """
-    info: dict[str, int] = {"files": [], "file_count": 0, "total_bytes": 0}
+    info: dict[str, int] = {"files": set(), "file_count": 0, "total_bytes": 0}
     for path in paths:
         if not is_readable_path(path):
             print_error(f"paths_info: the path '{path}' doesn't exist or "
                          "is not readable")
             continue
         if os.path.isfile(path):
-            info["files"].append(path)
+            info["files"].add(path)
             info["file_count"] += 1
             info["total_bytes"] += os.path.getsize(path)
         else:
             for file in all_files_in_directory(path, is_recursive):
                 if not is_readable_file(file) or file in exclude_set:
                     continue
-                info["files"].append(file)
+                info["files"].add(file)
                 info["file_count"] += 1
                 info["total_bytes"] += os.path.getsize(file)
     return info

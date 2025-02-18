@@ -4,10 +4,13 @@ import re
 import xxhtools.file_utils.file_utils as fu
 
 
-def add_to_list_dict(dict: dict, key: str, value: list[int]) -> None:
+def add_to_list_dict(dict: dict, key: str, value: list[str]) -> None:
     """
-    Add a `value` which is a string element of a list to a `key` in the
-    dictionary. If the key does not exist, create it.
+    The `dict` is a dictionary in which the keys are strings and the values are
+    lists of strings. If `key` is already in the dictionary, the `value` is
+    appended to the list of values of that key, but only if the `value` is not
+    already in the list. If the `key` is not in the dictionary, a new key is
+    created with the `value` as the first element of the list.
     """
     if key in dict:
         if value not in dict[key]:
@@ -16,62 +19,35 @@ def add_to_list_dict(dict: dict, key: str, value: list[int]) -> None:
         dict[key] = [value]
 
 
-def dirs_hash_dict(cache_dict: dict[str, list[str]],
-                      dir1: str,
-                      dir2: str,
-                      is_recursive: bool) -> dict[str, list[str]]:
-    """
-    Compute the xxHash64 hash of all the files in `dir1` and `dir2` and
-    return a dictionary in which the keys are the hashes and the values are
-    the paths that have that hash. If `is_recursive` is True, the hash of all
-    files in the directories **and subdirectories** is calculated. If a file is
-    already in `cache_dict`, the hash is not recalculated. The `cache_dict` has
-    absolute paths as keys and hashes as values.
-    """
+def build_hash_dict(cache_dict: dict[str, list[str]],
+                    path1: str,
+                    path2: str,
+                    is_recursive: bool) -> dict[str, list[str]]:
     hash_dict: dict[str, list[str]] = {}
-    for dir in [dir1, dir2]:
-        if not fu.is_readable_dir(dir):
-            fu.print_error(f"compute_hash_dict: the path '{dir}' doesn't "
+    files_set: set[str] = set()
+    for path in [path1, path2]:
+        files_set.clear()
+        if not fu.is_readable_path(path):
+            fu.print_error(f"build_hash_dict: the path '{dir}' doesn't "
                            "exist or is not readable", True)
-        for abs_file_path in fu.all_files_in_directory(dir, is_recursive):
-            if not fu.is_readable_file(abs_file_path):
-                fu.print_error(f"compute_hash_dict: the file '{abs_file_path}' doesn't "
+            continue
+        abs_file_path = os.path.abspath(path)
+        if fu.is_readable_file(abs_file_path):
+            files_set.add(abs_file_path)
+        elif fu.is_readable_dir(abs_file_path):
+            files_set.update(
+                fu.all_files_in_directory(abs_file_path, is_recursive))
+        for file in files_set:
+            if not fu.is_readable_file(file):
+                fu.print_error(f"compute_hash_dict: the file '{file}' doesn't "
                              "exist or is not readable")
                 continue
-            abs_file_path = os.path.abspath(abs_file_path)
-            if abs_file_path in cache_dict:
-                xhh_hash = cache_dict[abs_file_path]
+            if file in cache_dict:
+                xhh_hash = cache_dict[file]
             else:
-                xhh_hash = fu.xxh(abs_file_path)
-            add_to_list_dict(hash_dict, xhh_hash, abs_file_path)
+                xhh_hash = fu.xxh(file)
+            add_to_list_dict(hash_dict, xhh_hash, file)
     return hash_dict
-
-
-def files_hash_dict(cache_dict: dict[str, list[str]],
-                    file1: str,
-                    file2: str) -> dict[str, list[str]]:
-     """
-     Compute the xxHash64 hash of the files `file1` and `file2` and return a
-     dictionary in which the keys are the hashes and the values are the paths
-     that have that hash. If a file is already in `cache_dict`, the hash is not
-     recalculated. The `cache_dict` has absolute paths as keys and hashes as
-     values.
-     """
-     hash_dict: dict[str, list[str]] = {}
-     for file in [file1, file2]:
-          if not fu.is_readable_file(file):
-                fu.print_error(f"compute_hash_dict: the file '{file}' doesn't "
-                            "exist or is not readable", True)
-          abs_file_path = os.path.abspath(file)
-          if abs_file_path in cache_dict:
-                xhh_hash = cache_dict[abs_file_path]
-          else:
-                xhh_hash = fu.xxh(abs_file_path)
-          if xhh_hash in hash_dict:
-                hash_dict[xhh_hash].append(abs_file_path)
-          else:
-                hash_dict[xhh_hash] = [abs_file_path]
-     return hash_dict
 
 
 def get_hashes_from_cache(cache_file: str) -> dict[str, list[str]]:
@@ -255,27 +231,22 @@ def main(args: argparse.Namespace | None = None) -> None:
         cache_dict = {}
 
     hash_dict: dict[str, list[str]]
-    if fu.is_readable_file(args.path1) and fu.is_readable_file(args.path2):
-        hash_dict = files_hash_dict(cache_dict,
-                                    args.path1,
-                                    args.path2)
-        standard_output(hash_dict, args.path1, args.path2, args.verbose)
-    elif fu.is_readable_dir(args.path1) and fu.is_readable_dir(args.path2):
-        hash_dict = dirs_hash_dict(cache_dict,
-                                   args.path1,
-                                   args.path2,
-                                   args.recursive)
-        standard_output(hash_dict, args.path1, args.path2, args.verbose)
-
-    else:
+    both_files: bool = (fu.is_readable_file(args.path1) and
+                        fu.is_readable_file(args.path2))
+    both_dirs: bool = (fu.is_readable_dir(args.path1) and
+                       fu.is_readable_dir(args.path2))
+    if not (both_files or both_dirs):
         fu.print_error("the paths provided must be of the same type (both "
                        "files or both directories) and must be readable", True)
+    hash_dict = build_hash_dict(cache_dict, args.path1, args.path2,
+                               args.recursive)
+    standard_output(hash_dict, args.path1, args.path2, args.verbose)
 
 
 if __name__ == "__main__":
     my_args = argparse.Namespace
-    my_args.path1 = "./tests/fixtures/directory1/file1"
-    my_args.path2 = "./tests/fixtures/directory1/file1"
+    my_args.path1 = "./tests/fixtures/directory1/"
+    my_args.path2 = "./tests/fixtures/directory1/subdir1/"
     my_args.cachefile = None
     my_args.recursive = True
     my_args.verbose = True
