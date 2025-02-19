@@ -11,6 +11,10 @@ xxhash = "^3.5.0"
 pytest = "^8.3.4"
 coverage = "^7.6.12"
 
+[tool.poetry.scripts]
+xxh = "xxhtools.xxh:main"
+xdiff = "xxhtools.xdiff:main"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
