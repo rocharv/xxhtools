@@ -37,11 +37,12 @@ def file_output(path: str,
             if file in hashed_files:
                 continue
             file_handler.write(f"{fu.xxh(file)}  {absolute_path}\n")
-            show_status(current_bytes, current_file, total_bytes, total_files)
+            fu.show_status(current_bytes, current_file, total_bytes, total_files)
         if is_verbose:
             end_time: float = time.time()
             verbose_report(end_time - starting_time,
                            current_file, current_bytes)
+
 
 def fileoutput_report(file_name: str = "",
                       file_count: int = 0,
@@ -78,7 +79,7 @@ def read_args() -> argparse.Namespace:
     """
     arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog="xxh",
-        description=("Calculate the xxHash64 of a file "
+        description=("Calculate the 64-bit xxHash3 of a file "
                      "or all files in a directory. Only non-link and readable "
                      "paths are processed."),
         epilog="written by Rodrigo Viana Rocha")
@@ -107,30 +108,6 @@ def read_args() -> argparse.Namespace:
         help="show a report of elapsed time and total processed files and "
              " bytes at the end.")
     return arg_parser.parse_args()
-
-
-def show_status(current_bytes: int,
-                current_file: int,
-                total_bytes: int,
-                total_files: int,
-                each_file: int = 100) -> None:
-    """
-    Print, every `each_file` files, a status with the current number of files
-    processed, the total bytes processed and the percentage of total bytes
-    processed.
-    """
-    if current_file == 1:
-        print(f"Files to process: {total_files:,}")
-        print("Bytes to process: ", end="")
-        print(fu.bytes_to_human_str(total_bytes))
-    if total_files // each_file > 0:
-        trigger: bool = current_file % (total_files // each_file) == 0
-    else:
-        trigger: bool = False
-    if trigger:
-        print(f"Processed: {current_file:,} files, "
-            f"{fu.bytes_to_human_str(current_bytes)} "
-            f"({(current_bytes / total_bytes):.1%})", end="\r")
 
 
 def standard_output(path: str,

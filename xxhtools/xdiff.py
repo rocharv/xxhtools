@@ -22,9 +22,14 @@ def add_to_list_dict(dict: dict, key: str, value: list[str]) -> None:
 def build_hash_dict(cache_dict: dict[str, list[str]],
                     path1: str,
                     path2: str,
-                    is_recursive: bool) -> dict[str, list[str]]:
-    hash_dict: dict[str, list[str]] = {}
+                    is_recursive: bool,
+                    is_verbose: bool) -> dict[str, list[str]]:
+    current_bytes: int = 0
+    current_file: int = 0
+    total_bytes: int = 0
+    total_files: int = 0
     files_set: set[str] = set()
+    hash_dict: dict[str, list[str]] = {}
     for path in [path1, path2]:
         files_set.clear()
         if not fu.is_readable_path(path):
@@ -35,18 +40,25 @@ def build_hash_dict(cache_dict: dict[str, list[str]],
         if fu.is_readable_file(abs_file_path):
             files_set.add(abs_file_path)
         elif fu.is_readable_dir(abs_file_path):
-            files_set.update(
-                fu.all_files_in_directory(abs_file_path, is_recursive))
-        for file in files_set:
-            if not fu.is_readable_file(file):
-                fu.print_error(f"compute_hash_dict: the file '{file}' doesn't "
-                             "exist or is not readable")
-                continue
-            if file in cache_dict:
-                xhh_hash = cache_dict[file]
-            else:
-                xhh_hash = fu.xxh(file)
-            add_to_list_dict(hash_dict, xhh_hash, file)
+            files_set.update(fu.all_files_in_directory(abs_file_path,
+                                                       is_recursive))
+    total_files += len(files_set)
+    total_bytes += sum(os.path.getsize(file) for file in files_set)
+    for file in files_set:
+        current_bytes += os.path.getsize(file)
+        current_file += 1
+        if is_verbose:
+            fu.show_status(current_bytes, current_file,
+                            total_bytes, total_files)
+        if not fu.is_readable_file(file):
+            fu.print_error(f"compute_hash_dict: the file '{file}' doesn't "
+                            "exist or is not readable")
+            continue
+        if file in cache_dict:
+            xhh_hash = cache_dict[file]
+        else:
+            xhh_hash = fu.xxh(file)
+        add_to_list_dict(hash_dict, xhh_hash, file)
     return hash_dict
 
 
@@ -108,15 +120,15 @@ def print_path_comparison(hash_dict: dict[str, list[str]],
     exclusive2_dict: dict[str, list[str]] = {k: v for k, v in hash_dict.items()
                                             if k in exclusive2}
     if is_verbose:
-        print(f"Exclusive hashes in '{path1}' (total = {len(exclusive1)})")
+        print(f"Exclusive hashes in '{path1}' (total = {len(exclusive1):,})")
     print("<", end="")
     print_dict(exclusive1_dict)
     if is_verbose:
-        print(f"Exclusive hashes in '{path2}' (total = {len(exclusive2)})")
+        print(f"Exclusive hashes in '{path2}' (total = {len(exclusive2):,})")
     print(">", end="")
     print_dict(exclusive2_dict)
     if is_verbose:
-        print(f"Common hashes (total = {len(common)})")
+        print(f"Common hashes (total = {len(common):,})")
     print("=", end="")
     print_dict(common_dict)
     if is_verbose:
@@ -145,7 +157,7 @@ def read_args() -> argparse.Namespace:
                      "or two directories. If the paths are directories, the "
                      "files inside them are compared. If the paths are files, "
                      "the hash of the files is calculated and compared. The "
-                     "paths are compared by their xxHash64 hash. Only "
+                     "paths are compared by their 64-bit xxHash3. Only "
                      "non-link and readable paths are processed."),
         epilog="written by Rodrigo Viana Rocha")
     arg_parser.add_argument(
@@ -239,15 +251,9 @@ def main(args: argparse.Namespace | None = None) -> None:
         fu.print_error("the paths provided must be of the same type (both "
                        "files or both directories) and must be readable", True)
     hash_dict = build_hash_dict(cache_dict, args.path1, args.path2,
-                               args.recursive)
+                               args.recursive, args.verbose)
     standard_output(hash_dict, args.path1, args.path2, args.verbose)
 
 
 if __name__ == "__main__":
-    my_args = argparse.Namespace
-    my_args.path1 = "./tests/fixtures/"
-    my_args.path2 = "./tests/fixtures/directory1/"
-    my_args.cachefile = None
-    my_args.recursive = True
-    my_args.verbose = True
-    main(my_args)
+    main()

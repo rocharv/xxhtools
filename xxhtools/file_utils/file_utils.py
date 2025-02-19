@@ -1,5 +1,5 @@
 import os
-from xxhash import xxh64
+from xxhash import xxh3_64
 
 
 def all_files_in_directory(path: str, is_recursive: bool) -> set[str]:
@@ -20,16 +20,15 @@ def bytes_to_human_str(bytes: int) -> str:
     """
     Return a human readable string of the number of `bytes` provided.
     """
+    prefix: list[str] = ["K", "M", "G", "T"]
+    multiplier: list[int] = [1_048_576, 1_073_741_824,
+                             1_099_511_627_776, 1_125_899_906_842_624]
     if bytes < 1024:
-        return f"{bytes:,} B"
-    elif bytes < 1_048_576:
-        return f"{bytes / 1024:,.1f} KB"
-    elif bytes < 1_073_741_824:
-        return f"{bytes / 1_048_576:,.1f} MB"
-    elif bytes < 1_099_511_627_776:
-        return f"{bytes / 1_073_741_824:,.1f} GB"
-    else:
-        return f"{bytes / 1_099_511_627_776:,.1f} TB"
+            return f"{bytes:,} B"
+    for i, m in enumerate(multiplier):
+        if bytes < m:
+            return f"{bytes / (multiplier[i] / 1_024):,.1f} {prefix[i]}B"
+    return f"{bytes / multiplier[-1]:,.1f} PB"
 
 
 def is_appendable_file(file_name: str) -> bool:
@@ -114,12 +113,36 @@ def print_error(message: str, halt: bool = False) -> None:
         raise SystemExit(1)
 
 
+def show_status(current_bytes: int,
+                current_file: int,
+                total_bytes: int,
+                total_files: int,
+                each_file: int = 100) -> None:
+    """
+    Print, every `each_file` files, a status with the current number of files
+    processed, the total bytes processed and the percentage of total bytes
+    processed.
+    """
+    if current_file == 1:
+        print(f"Files to process: {total_files:,}")
+        print("Bytes to process: ", end="")
+        print(bytes_to_human_str(total_bytes))
+    if total_files // each_file > 0:
+        trigger: bool = current_file % (total_files // each_file) == 0
+    else:
+        trigger: bool = False
+    if trigger:
+        print(f"Processed: {current_file:,} files, "
+            f"{bytes_to_human_str(current_bytes)} "
+            f"({(current_bytes / total_bytes):.1%})       ", end="\r")
+
+
 def xxh(file_name: str) -> str:
     """
     Return the xxHash64 hash of the file `file_name`.
     """
     if is_readable_file(file_name):
-        hash_object: xxh64 = xxh64()
+        hash_object: xxh3_64 = xxh3_64()
         with open(file_name, "rb") as f:
             for chunk in iter(lambda: f.read(1024), b""):
                 hash_object.update(chunk)
