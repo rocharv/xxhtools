@@ -37,7 +37,8 @@ def file_output(path: str,
             if file in hashed_files:
                 continue
             file_handler.write(f"{fu.xxh(file)}  {absolute_path}\n")
-            fu.show_status(current_bytes, current_file, total_bytes, total_files)
+            fu.show_status(current_bytes, current_file,
+                           total_bytes, total_files)
         if is_verbose:
             end_time: float = time.time()
             verbose_report(end_time - starting_time,
